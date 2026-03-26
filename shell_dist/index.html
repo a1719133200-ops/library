@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>早船工作流转换工具</title>
+    <link rel="icon" href="/logo.png" type="image/png">
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background-color: #ffffff; }
+        iframe { 
+            width: 100%; 
+            height: 100%; 
+            border: none; 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            z-index: 1;
+        }
+        #loading-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #fff; z-index: 999;
+            display: flex; justify-content: center; align-items: center;
+            transition: opacity 0.5s ease;
+        }
+        .loading-spinner {
+            width: 40px; height: 40px;
+            border: 4px solid #f3f3f3; border-top: 4px solid #333; border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div id="loading-layer">
+        <div class="loading-spinner"></div>
+    </div>
+    <!-- 关键：添加 allow-downloads 权限 -->
+    <iframe id="app-frame" sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-downloads" 
+            data-brother-site="兄弟合作分站：https://dkv9mg8rmx.coze.site"></iframe>
+    <script>
+        const BROTHER_SITE_DESC = "兄弟合作分站：https://dkv9mg8rmx.coze.site";
+        const BROTHER_SITE_DOMAIN = "https://dkv9mg8rmx.coze.site";
+        const iframe = document.getElementById('app-frame');
+        const loadingLayer = document.getElementById('loading-layer');
+        
+        console.log(BROTHER_SITE_DESC);
+        
+        function initFrame() {
+            const currentPath = window.location.pathname + window.location.search;
+            if (currentPath === '/' || currentPath === '/index.html') {
+                iframe.src = BROTHER_SITE_DOMAIN;
+            } else {
+                const cleanDomain = BROTHER_SITE_DOMAIN.replace(/\/$/, '');
+                iframe.src = cleanDomain + currentPath;
+            }
+        }
+        
+        iframe.onload = function() {
+            loadingLayer.style.opacity = '0';
+            setTimeout(() => { loadingLayer.style.display = 'none'; }, 500);
+        };
+        
+        // 仅保留剪贴板处理
+        window.addEventListener('message', function(event) {
+            const data = event.data;
+            
+            if (data && data.type === 'ROUTE_CHANGE' && data.path) {
+                history.replaceState(null, '', data.path);
+            }
+            
+            if (data && data.type === 'COPY_TO_CLIPBOARD') {
+                navigator.clipboard.writeText(data.text).then(() => {
+                    iframe.contentWindow.postMessage({
+                        type: 'COPY_SUCCESS',
+                        id: data.id
+                    }, '*');
+                }).catch(err => {
+                    iframe.contentWindow.postMessage({
+                        type: 'COPY_ERROR',
+                        id: data.id,
+                        error: err.message
+                    }, '*');
+                });
+            }
+        });
+        
+        initFrame();
+    </script>
+</body>
+</html>
